@@ -1,0 +1,1391 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Đèn Lồng Chạy Đêm</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&family=Bungee&display=swap">
+<style>
+/* Layout: một cột giữa trang gồm bảng điểm, dòng thời gian 5 chặng, rồi khung chơi hoặc thẻ kể chuyện chiếm cùng một chỗ. */
+:root {
+  --bg: #15121f;
+  --surface: #1e1a2e;
+  --line: #352f4a;
+  --fg: #f4eadb;
+  --muted: #a79fb8;
+  --accent: #ef4b3f;
+  --gold: #f4b942;
+  --jade: #3ea57c;
+  --font-display: "Bungee", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { background: var(--bg); }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-block: 20px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 14px; min-width: 0; }
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(24px, 6vw, 34px);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  margin: 0;
+  color: var(--gold);
+  text-wrap: balance;
+}
+.sub { margin: 4px 0 0; color: var(--muted); text-wrap: balance; }
+.hud { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.stat { display: grid; }
+.stat.right { text-align: right; }
+.label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.num {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 6vw, 32px);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.num.best { color: var(--gold); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  min-width: 0;
+}
+.chip b { font-weight: 600; }
+.lives { display: inline-flex; gap: 4px; }
+.life { width: 10px; height: 14px; border-radius: 50%; background: var(--accent); }
+.life.off { background: transparent; border: 1px solid var(--line); }
+.track { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; }
+.track li { flex: 1; min-width: 0; display: grid; gap: 4px; font-size: 12px; color: var(--muted); --p: 0%; }
+.track li.now { color: var(--fg); }
+.track .yr { font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.track i { display: block; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--gold) var(--p), var(--line) var(--p)); }
+#stageView { display: grid; gap: 14px; }
+canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 300;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+canvas:focus-visible, .btn:focus-visible, .opt:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  min-height: 64px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn.jump { background: var(--accent); border-color: var(--accent); color: #fff7ec; }
+.btn:active { transform: translateY(2px); }
+.hint { margin: 0; color: var(--muted); font-size: 13px; }
+kbd {
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--fg);
+}
+.soundbtn {
+  justify-self: start;
+  font-family: var(--font-body);
+  font-size: 13px;
+  min-height: 40px;
+  padding: 6px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.soundbtn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.card {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  min-width: 0;
+}
+.card h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(22px, 5.5vw, 28px);
+  line-height: 1.15;
+  margin: 0;
+  color: var(--gold);
+  text-wrap: balance;
+}
+.card h2:focus { outline: none; }
+.card p { margin: 0; max-width: 65ch; }
+.eyebrow { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.quiz { display: grid; gap: 10px; padding-top: 6px; border-top: 1px solid var(--line); }
+.q { font-weight: 600; }
+.opts { display: grid; gap: 8px; }
+.opt {
+  font-family: var(--font-body);
+  font-size: 15px;
+  text-align: left;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.opt:disabled { cursor: default; color: var(--fg); opacity: 1; }
+.opt.ok { border-color: var(--jade); border-width: 2px; }
+.opt.no { border-color: var(--accent); border-width: 2px; }
+.fb { color: var(--muted); }
+.stats { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0; }
+.stats div { display: grid; }
+.stats dt { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.stats dd { margin: 0; font-family: var(--font-display); font-size: 26px; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .btn:active { transform: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Đèn Lồng Chạy Đêm</h1>
+    <p class="sub">Vào vai một anh bộ đội mang ngọn đèn soi đường, theo chân Chủ tịch Hồ Chí Minh qua 5 chặng của hành trình tìm đường cứu nước, từ 1911 đến 1945.</p>
+  </header>
+
+  <div class="hud">
+    <div class="stat"><span class="label">Điểm</span><span class="num" id="score">00000</span></div>
+    <div class="stat right"><span class="label">Kỷ lục</span><span class="num best" id="best">00000</span></div>
+  </div>
+
+  <div class="chips">
+    <span class="chip" id="chipChap">Chặng 1/5 · Bến Nhà Rồng</span>
+    <span class="chip"><span class="label">Theo chân</span><b id="who">Nguyễn Tất Thành</b></span>
+    <span class="chip"><span class="label">Ý chí</span><span class="lives" id="lives"></span></span>
+    <span class="chip"><span class="label">Sao hy vọng</span><b id="books">0</b></span>
+  </div>
+
+  <ol class="track" id="track" aria-label="Các chặng của hành trình"></ol>
+
+  <section id="stageView" hidden>
+    <canvas id="game" tabindex="0" role="img" aria-label="Khung chơi game. Nhấn phím cách hoặc chạm vào để nhảy, giữ mũi tên xuống để cúi."></canvas>
+    <div class="controls">
+      <button class="btn jump" id="jumpBtn" type="button">NHẢY</button>
+      <button class="btn" id="duckBtn" type="button">CÚI</button>
+    </div>
+    <p class="hint"><kbd>Space</kbd> hoặc <kbd>↑</kbd> để nhảy, giữ <kbd>↓</kbd> để cúi. Trên điện thoại, chạm vào khung hình hoặc dùng hai nút phía trên. Nhặt ngôi sao hy vọng, mỗi sao sẽ ngân lên một tiếng chuông.</p>
+    <button class="soundbtn" id="soundBtn" type="button" aria-pressed="true">Âm thanh: bật</button>
+  </section>
+
+  <section id="cardView" class="card"></section>
+</div>
+
+<script>
+(function () {
+  var cv = document.getElementById('game');
+  var ctx = cv.getContext('2d');
+  var W = 640, H = 300, G = 244, LEN = 9000;
+
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * dpr;
+  cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  var css = getComputedStyle(document.documentElement);
+  function tok(n) { return css.getPropertyValue(n).trim() || '#ffffff'; }
+  var col = {
+    bg: tok('--bg'), surface: tok('--surface'), line: tok('--line'), fg: tok('--fg'),
+    muted: tok('--muted'), accent: tok('--accent'), gold: tok('--gold'), jade: tok('--jade')
+  };
+  var FONT_D = 'Bungee, "Be Vietnam Pro", sans-serif';
+  var FONT_B = '"Be Vietnam Pro", system-ui, sans-serif';
+
+  var scoreEl = document.getElementById('score');
+  var bestEl = document.getElementById('best');
+  var chapEl = document.getElementById('chipChap');
+  var whoEl = document.getElementById('who');
+  var livesEl = document.getElementById('lives');
+  var booksEl = document.getElementById('books');
+  var trackEl = document.getElementById('track');
+  var stageEl = document.getElementById('stageView');
+  var cardEl = document.getElementById('cardView');
+
+  /* ---------- Nội dung 5 chặng ---------- */
+  var CH = [
+    {
+      span: '1911', end: '1911', place: 'Bến Nhà Rồng', who: 'Nguyễn Tất Thành', base: 280,
+      k: { low: 'crate', tall: 'crates2', air: 'gull' },
+      title: 'Rời bến Nhà Rồng',
+      text: [
+        'Ngày 5/6/1911, người thanh niên Nguyễn Tất Thành, khi đó 21 tuổi, rời bến cảng Nhà Rồng (Sài Gòn) trên tàu Amiral Latouche-Tréville. Anh lấy tên Văn Ba và xin làm phụ bếp để có đường ra nước ngoài.',
+        'Anh muốn tận mắt xem các nước làm thế nào, rồi trở về giúp đồng bào mình. Đó là bước đầu của hành trình tìm đường cứu nước.'
+      ],
+      q: { q: 'Năm 1911, Nguyễn Tất Thành ra đi tìm đường cứu nước từ đâu?', a: ['Bến cảng Nhà Rồng (Sài Gòn)', 'Cảng Hải Phòng', 'Cảng Đà Nẵng'], ok: 0, why: 'Người xuống tàu ở bến cảng Nhà Rồng ngày 5/6/1911.' }
+    },
+    {
+      span: '1911–1919', end: '1919', place: 'Châu Âu mùa đông', who: 'Nguyễn Ái Quốc', base: 310,
+      k: { low: 'snow', tall: 'agent', air: 'sign' },
+      title: 'Bản yêu sách gửi Versailles',
+      text: [
+        'Trong nhiều năm ở nước ngoài, Người làm đủ nghề để kiếm sống: phụ bếp, quét tuyết, làm thợ ảnh. Người vừa làm vừa học, tìm hiểu đời sống và các cuộc đấu tranh ở nhiều nước.',
+        'Năm 1919, lấy tên Nguyễn Ái Quốc, Người cùng những người Việt Nam yêu nước ở Pháp gửi Bản yêu sách của nhân dân An Nam đến Hội nghị Versailles, đòi quyền tự do, dân chủ và bình đẳng cho người Việt Nam.'
+      ],
+      q: { q: 'Năm 1919, Nguyễn Ái Quốc gửi văn bản nào đến Hội nghị Versailles?', a: ['Bản yêu sách của nhân dân An Nam', 'Tuyên ngôn Độc lập', 'Đường Kách mệnh'], ok: 0, why: 'Tuyên ngôn Độc lập ra đời năm 1945, còn Đường Kách mệnh là cuốn sách xuất bản năm 1927.' }
+    },
+    {
+      span: '1920–1930', end: '1930', place: 'Quảng Châu, Hương Cảng', who: 'Nguyễn Ái Quốc', base: 340,
+      k: { low: 'barrier', tall: 'post', air: 'spot' },
+      title: 'Tìm thấy con đường, lập Đảng',
+      text: [
+        'Năm 1920, tại Đại hội Tours của Đảng Xã hội Pháp, Nguyễn Ái Quốc tán thành gia nhập Quốc tế Cộng sản và tìm thấy con đường cứu nước theo chủ nghĩa Mác – Lênin.',
+        'Năm 1925, Người thành lập Hội Việt Nam Cách mạng Thanh niên ở Quảng Châu để đào tạo cán bộ. Ngày 3/2/1930, Người chủ trì hội nghị hợp nhất các tổ chức cộng sản tại Hương Cảng, thành lập Đảng Cộng sản Việt Nam.'
+      ],
+      q: { q: 'Ngày 3/2/1930 diễn ra sự kiện nào?', a: ['Thành lập Đảng Cộng sản Việt Nam', 'Thành lập Mặt trận Việt Minh', 'Tổng khởi nghĩa Tháng Tám'], ok: 0, why: 'Mặt trận Việt Minh ra đời năm 1941, còn Tổng khởi nghĩa Tháng Tám diễn ra năm 1945.' }
+    },
+    {
+      span: '1941–1943', end: '1943', place: 'Pác Bó, Cao Bằng', who: 'Nguyễn Ái Quốc', base: 370,
+      k: { low: 'rock', tall: 'cliff', air: 'bat' },
+      title: 'Pác Bó và những ngày trong tù',
+      text: [
+        'Tháng 1/1941, sau khoảng ba mươi năm xa Tổ quốc, Người trở về nước, sống và làm việc ở hang Cốc Bó (Pác Bó, Cao Bằng). Tháng 5/1941, Người chủ trì Hội nghị Trung ương 8, thành lập Mặt trận Việt Minh.',
+        'Năm 1942, Người sang Trung Quốc, lấy tên Hồ Chí Minh, rồi bị chính quyền Tưởng Giới Thạch bắt giam hơn một năm. Trong tù, Người viết tập thơ Nhật ký trong tù.'
+      ],
+      q: { q: 'Tập thơ nào Người viết trong thời gian bị giam ở Trung Quốc?', a: ['Nhật ký trong tù', 'Đường Kách mệnh', 'Bản án chế độ thực dân Pháp'], ok: 0, why: 'Nhật ký trong tù gồm hơn một trăm bài thơ chữ Hán, ghi lại những ngày bị giam cầm.' }
+    },
+    {
+      span: '1945', end: '1945', place: 'Hà Nội, tháng Tám', who: 'Hồ Chí Minh', base: 400,
+      k: { low: 'sandbag', tall: 'barricade', air: 'wire' },
+      title: 'Tuyên ngôn Độc lập',
+      text: [
+        'Tháng 8/1945, Việt Minh lãnh đạo nhân dân cả nước Tổng khởi nghĩa giành chính quyền, gọi là Cách mạng Tháng Tám.',
+        'Ngày 2/9/1945, tại Quảng trường Ba Đình (Hà Nội), Chủ tịch Hồ Chí Minh đọc Tuyên ngôn Độc lập, khai sinh nước Việt Nam Dân chủ Cộng hòa.'
+      ],
+      q: { q: 'Chủ tịch Hồ Chí Minh đọc Tuyên ngôn Độc lập ngày 2/9/1945 ở đâu?', a: ['Quảng trường Ba Đình, Hà Nội', 'Bến cảng Nhà Rồng, Sài Gòn', 'Hang Cốc Bó, Cao Bằng'], ok: 0, why: 'Rất đông đồng bào Hà Nội đã tập trung ở Quảng trường Ba Đình để nghe Người đọc Tuyên ngôn Độc lập.' }
+    }
+  ];
+
+  /* ---------- Trạng thái ---------- */
+  var view = 'card';
+  var state = 'card';
+  var ci = 0, dist = 0, speed = 280, t = 0, last = 0;
+  var lives = 3, inv = 0, shake = 0, books = 0, booksAtStart = 0, correct = 0;
+  var sinceSpawn = 0, nextGap = 380, overAt = 0, bannerT = 0, bannerTitle = '', bannerSub = '', p2shown = false;
+  var best = 0;
+  var duckHeld = false;
+  var obs = [], items = [], pops = [];
+  var actx = null, soundOn = true;
+  var P = { x: 72, y: G, vy: 0, onGround: true, duck: false };
+
+  try { best = parseInt(localStorage.getItem('den-long-best-v2'), 10) || 0; } catch (e) {}
+
+  function saveBest() {
+    var s = Math.floor(dist / 10);
+    if (s > best) {
+      best = s;
+      try { localStorage.setItem('den-long-best-v2', String(best)); } catch (e) {}
+    }
+  }
+
+  function pad(n) { return String(n).padStart(5, '0'); }
+  function hash(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  function prog() { return Math.min(1, Math.max(0, (dist - ci * LEN) / LEN)); }
+  function phase2() { return ci === 3 && prog() >= 0.5; }
+
+  function info() {
+    if (ci === 3) {
+      return phase2()
+        ? { place: 'Nhà giam Quảng Tây', who: 'Hồ Chí Minh', year: '1942–1943' }
+        : { place: 'Pác Bó, Cao Bằng', who: 'Nguyễn Ái Quốc', year: '1941' };
+    }
+    var c = CH[ci];
+    return { place: c.place, who: c.who, year: c.span };
+  }
+
+  function kinds() {
+    return phase2() ? { low: 'chain', tall: 'bars', air: 'hang' } : CH[ci].k;
+  }
+
+  /* ---------- Vòng chơi ---------- */
+  function setBanner() {
+    var inf = info();
+    bannerTitle = 'Chặng ' + (ci + 1) + ' · ' + inf.place;
+    bannerSub = inf.year + ' · ' + inf.who;
+    bannerT = 3.2;
+  }
+
+  function showStage() {
+    cardEl.hidden = true;
+    stageEl.hidden = false;
+    view = 'stage';
+    try { cv.focus({ preventScroll: true }); } catch (e) {}
+  }
+
+  function startChapter(n, retry) {
+    ci = n;
+    dist = n * LEN;
+    if (retry) { books = booksAtStart; } else { booksAtStart = books; }
+    lives = 3; inv = 0; shake = 0;
+    obs = []; items = []; pops = [];
+    sinceSpawn = 100; nextGap = 380;
+    P.y = G; P.vy = 0; P.onGround = true; P.duck = false;
+    p2shown = false;
+    state = 'run';
+    audioInit();
+    setBanner();
+    showStage();
+  }
+
+  function spawn() {
+    var K2 = kinds(), r = Math.random(), name;
+    var airOK = ci > 0 || prog() > 0.4;
+    if (airOK && r < 0.22) name = K2.air;
+    else if (r < 0.6) name = K2.low;
+    else name = K2.tall;
+    var def = K[name];
+    var o = { kind: name, w: def.w, h: def.h, x: W + 40 };
+    o.y = def.air ? G - 30 - def.h : G - def.h;
+    obs.push(o);
+    nextGap = speed * (0.85 + Math.random() * 0.8) + o.w + 150;
+    if (Math.random() < 0.7) {
+      items.push({ x: o.x + nextGap * 0.5, y: Math.random() < 0.5 ? G - 34 : G - 104, w: 20, h: 20 });
+    }
+  }
+
+  function jump() {
+    if (P.onGround) { P.vy = -760; P.onGround = false; }
+  }
+
+  function press() {
+    if (state === 'over') {
+      if (performance.now() - overAt > 350) startChapter(ci, true);
+      return;
+    }
+    if (state === 'run') jump();
+  }
+
+  function hitbox() {
+    var h = P.duck ? 28 : 42, w = P.duck ? 34 : 28;
+    return { l: P.x + 5, r: P.x + w - 5, t: P.y - h + 5, b: P.y - 2 };
+  }
+
+  function endChapter() {
+    dist = (ci + 1) * LEN;
+    saveBest();
+    state = 'card';
+    if (ci < 4) showChapterCard(ci); else showChapterCard(ci);
+  }
+
+  function update(dt) {
+    var p = prog();
+    speed = CH[ci].base + p * 40;
+    dist += speed * dt;
+    if (dist >= (ci + 1) * LEN) { endChapter(); return; }
+
+    if (bannerT > 0) bannerT -= dt;
+    for (var pi = pops.length - 1; pi >= 0; pi--) {
+      pops[pi].age += dt;
+      if (pops[pi].age > 0.45) pops.splice(pi, 1);
+    }
+    if (inv > 0) inv -= dt;
+    if (shake > 0) shake -= dt;
+
+    if (ci === 3 && !p2shown && prog() >= 0.5) { p2shown = true; setBanner(); }
+
+    if (!P.onGround) {
+      P.vy += (duckHeld ? 4200 : 2200) * dt;
+      P.y += P.vy * dt;
+      if (P.y >= G) { P.y = G; P.vy = 0; P.onGround = true; }
+    }
+    P.duck = duckHeld && P.onGround;
+
+    sinceSpawn += speed * dt;
+    if (sinceSpawn >= nextGap) { spawn(); sinceSpawn = 0; }
+
+    var hb = hitbox(), i;
+    for (i = items.length - 1; i >= 0; i--) {
+      var it = items[i];
+      it.x -= speed * dt;
+      if (it.x + it.w < -20) { items.splice(i, 1); continue; }
+      if (hb.r > it.x && hb.l < it.x + it.w && hb.b > it.y && hb.t < it.y + it.h) {
+        books += 1;
+        pops.push({ x: it.x + it.w / 2, y: it.y + it.h / 2, age: 0 });
+        chime();
+        items.splice(i, 1);
+      }
+    }
+    for (i = obs.length - 1; i >= 0; i--) {
+      var o = obs[i];
+      o.x -= speed * dt;
+      if (o.x + o.w < -20) { obs.splice(i, 1); continue; }
+      if (inv <= 0 && hb.r > o.x + 3 && hb.l < o.x + o.w - 3 && hb.b > o.y + 3 && hb.t < o.y + o.h) {
+        lives -= 1;
+        inv = 1.4;
+        shake = 0.25;
+        if (lives <= 0) {
+          lives = 0;
+          state = 'over';
+          overAt = performance.now();
+          saveBest();
+          return;
+        }
+      }
+    }
+  }
+
+  /* ---------- Vẽ khung cảnh ---------- */
+  function sky(c0, c1, h) {
+    var g = ctx.createLinearGradient(0, 0, 0, h || G);
+    g.addColorStop(0, c0);
+    g.addColorStop(1, c1);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, h || G);
+  }
+
+  function starsLayer(a) {
+    ctx.fillStyle = col.fg;
+    for (var i = 0; i < 46; i++) {
+      var x = hash(i) * W, y = hash(i + 50) * (G - 90);
+      ctx.globalAlpha = a * (0.45 + 0.4 * Math.sin(t * 1.5 + i));
+      ctx.fillRect(x, y, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function moon(x, y, r) {
+    ctx.shadowColor = '#f3e3c0';
+    ctx.shadowBlur = 26;
+    ctx.fillStyle = '#f3e3c0';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+  }
+
+  function star(cx, cy, R, fill) {
+    ctx.beginPath();
+    for (var i = 0; i < 10; i++) {
+      var r = i % 2 ? R * 0.4 : R, a = -Math.PI / 2 + i * Math.PI / 5;
+      ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+
+  function groundFill(c, lineC, tickC) {
+    ctx.fillStyle = c;
+    ctx.fillRect(0, G, W, H - G);
+    ctx.fillStyle = lineC;
+    ctx.globalAlpha = 0.75;
+    ctx.fillRect(0, G, W, 2);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = tickC;
+    var off = dist % 48;
+    for (var x = -off; x < W; x += 48) {
+      ctx.fillRect(x, G + 14, 20, 3);
+      ctx.fillRect(x + 24, G + 30, 10, 3);
+    }
+  }
+
+  function skyline(f, cw, minH, maxH, color, seed, winA) {
+    var off = dist * f, k0 = Math.floor(off / cw);
+    for (var k = k0; k <= k0 + Math.ceil(W / cw) + 1; k++) {
+      var x = k * cw - off, h = minH + hash(k + seed) * (maxH - minH);
+      ctx.fillStyle = color;
+      ctx.fillRect(x, G - h, cw - 4, h);
+      if (winA > 0) {
+        ctx.fillStyle = col.gold;
+        for (var r = 0; r < 8; r++) {
+          var wy = G - h + 10 + r * 16;
+          if (wy > G - 14) break;
+          for (var c = 0; c < 2; c++) {
+            if (hash(k * 13 + r * 7 + c * 3 + seed) > 0.55) {
+              ctx.globalAlpha = winA;
+              ctx.fillRect(x + 10 + c * 20, wy, 8, 9);
+            }
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function ridge(f, color, amp, base, seed) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, G);
+    for (var x = 0; x <= W; x += 10) {
+      var u = (x + dist * f) / 70;
+      ctx.lineTo(x, base - amp * (Math.abs(Math.sin(u + seed)) + 0.4 * Math.abs(Math.sin(u * 2.7 + seed * 2))));
+    }
+    ctx.lineTo(W, G);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function pines(f, color) {
+    var cw = 44, off = dist * f, k0 = Math.floor(off / cw);
+    ctx.fillStyle = color;
+    for (var k = k0; k <= k0 + Math.ceil(W / cw) + 1; k++) {
+      var x = k * cw - off, h = 34 + hash(k + 5) * 34;
+      ctx.beginPath();
+      ctx.moveTo(x, G - h); ctx.lineTo(x + 16, G); ctx.lineTo(x - 16, G);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x, G - h - 14); ctx.lineTo(x + 11, G - h * 0.55); ctx.lineTo(x - 11, G - h * 0.55);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function scene0() {
+    sky('#12203b', '#2c4673', 170);
+    starsLayer(0.8);
+    moon(530, 58, 20);
+    var nx = 250 - dist * 0.1;
+    if (nx > -300) {
+      ctx.fillStyle = '#0d1730';
+      ctx.fillRect(nx - 70, 164, 300, 8);
+      ctx.fillRect(nx, 134, 110, 30);
+      ctx.beginPath();
+      ctx.moveTo(nx - 8, 134); ctx.lineTo(nx + 14, 114); ctx.lineTo(nx + 96, 114); ctx.lineTo(nx + 118, 134);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(nx + 40, 100, 30, 14);
+      ctx.fillRect(nx + 50, 92, 10, 8);
+    }
+    ctx.fillStyle = '#16294a';
+    ctx.fillRect(0, 170, W, G - 170);
+    ctx.strokeStyle = 'rgba(180,205,240,0.22)';
+    ctx.lineWidth = 2;
+    for (var r = 0; r < 5; r++) {
+      var y = 180 + r * 13;
+      ctx.beginPath();
+      for (var x = 0; x <= W; x += 10) {
+        var yy = y + Math.sin((x + dist * (0.5 + r * 0.12)) / 22 + r) * 2.5;
+        if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(243,227,192,0.35)';
+    for (var i = 0; i < 6; i++) {
+      var w = 30 - i * 3;
+      ctx.fillRect(530 - w / 2 + Math.sin(t * 2 + i) * 6, 176 + i * 11, w, 2);
+    }
+    ctx.fillStyle = 'rgba(200,170,120,0.5)';
+    ctx.fillRect(0, G - 30, W, 3);
+    var off = dist % 70;
+    for (var px = -off; px < W; px += 70) ctx.fillRect(px, G - 30, 4, 30);
+    groundFill('#3a2b22', '#c9a36b', 'rgba(255,255,255,0.08)');
+  }
+
+  var flakes = [];
+  for (var fi = 0; fi < 60; fi++) flakes.push({ x: hash(fi + 100) * W, y: hash(fi + 200) * G, s: 20 + hash(fi + 300) * 30, p: hash(fi) * 6, r: hash(fi + 400) < 0.3 ? 3 : 2 });
+
+  function scene1() {
+    sky('#1a2142', '#3b4a7a');
+    starsLayer(0.6);
+    moon(120, 50, 15);
+    var ex = 470 - dist * 0.04;
+    if (ex > -60) {
+      ctx.fillStyle = '#161c38';
+      ctx.beginPath();
+      ctx.moveTo(ex - 44, G); ctx.lineTo(ex - 12, G - 80); ctx.lineTo(ex - 6, G - 140); ctx.lineTo(ex, G - 176);
+      ctx.lineTo(ex + 6, G - 140); ctx.lineTo(ex + 12, G - 80); ctx.lineTo(ex + 44, G); ctx.lineTo(ex + 26, G);
+      ctx.lineTo(ex, G - 44); ctx.lineTo(ex - 26, G);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(ex - 14, G - 82, 28, 4);
+      ctx.fillRect(ex - 8, G - 142, 16, 3);
+    }
+    skyline(0.08, 70, 60, 120, '#161c38', 3, 0.25);
+    skyline(0.2, 56, 40, 90, '#10142b', 9, 0.5);
+    var gap = 200, off = dist * 0.45, k0 = Math.floor(off / gap);
+    for (var k = k0; k <= k0 + 5; k++) {
+      var x = k * gap - off;
+      ctx.fillStyle = '#0c0f20';
+      ctx.fillRect(x - 1.5, G - 70, 3, 70);
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = col.gold;
+      ctx.beginPath(); ctx.arc(x, G - 74, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(x, G - 74, 4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.75;
+    for (var i = 0; i < flakes.length; i++) {
+      var f = flakes[i];
+      var fy = (f.y + t * f.s) % G;
+      var fx = (((f.x + Math.sin(t * 1.2 + f.p) * 12 - dist * 0.25) % W) + W) % W;
+      ctx.fillRect(fx, fy, f.r, f.r);
+    }
+    ctx.globalAlpha = 1;
+    groundFill('#262c4a', '#e8eefb', 'rgba(255,255,255,0.10)');
+  }
+
+  function scene2() {
+    sky('#1b1226', '#4a2340');
+    starsLayer(0.5);
+    skyline(0.1, 64, 70, 130, '#150f1f', 21, 0.35);
+    skyline(0.25, 50, 40, 92, '#0f0a17', 27, 0.5);
+    ctx.strokeStyle = 'rgba(244,185,66,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, 24); ctx.lineTo(W, 24); ctx.stroke();
+    var gap = 120, off = dist * 0.5, k0 = Math.floor(off / gap);
+    for (var k = k0; k <= k0 + 6; k++) {
+      var lx = k * gap - off + Math.sin(t * 2 + k) * 3;
+      ctx.strokeStyle = 'rgba(244,185,66,0.5)';
+      ctx.beginPath(); ctx.moveTo(lx, 24); ctx.lineTo(lx, 34); ctx.stroke();
+      ctx.shadowColor = col.gold;
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = col.accent;
+      ctx.beginPath(); ctx.ellipse(lx, 48, 10, 13, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = col.gold;
+      ctx.fillRect(lx - 5, 33, 10, 3);
+      ctx.fillRect(lx - 5, 60, 10, 3);
+    }
+    groundFill('#2a1f33', '#d9a441', 'rgba(255,255,255,0.08)');
+  }
+
+  function scene3a() {
+    sky('#0d1b1c', '#1c3a36');
+    starsLayer(0.7);
+    moon(120, 56, 14);
+    ridge(0.06, '#10261f', 28, G - 70, 1.0);
+    ridge(0.15, '#0b1c18', 22, G - 34, 2.0);
+    pines(0.4, '#0a1914');
+    ctx.fillStyle = col.gold;
+    for (var i = 0; i < 14; i++) {
+      var x = (((hash(i) * W - dist * 0.3) % W) + W) % W;
+      var y = G - 40 - hash(i + 9) * 110 + Math.sin(t + i) * 6;
+      ctx.globalAlpha = Math.max(0, 0.4 + 0.6 * Math.sin(t * 3 + i));
+      ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    groundFill('#14231d', col.jade, 'rgba(255,255,255,0.07)');
+  }
+
+  function scene3b() {
+    ctx.fillStyle = '#161320';
+    ctx.fillRect(0, 0, W, G);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (var r = 0; r < 11; r++) {
+      var y = 8 + r * 22;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      var o = ((dist * 0.5 + (r % 2) * 30) % 60);
+      for (var x = -o; x < W; x += 60) {
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 22); ctx.stroke();
+      }
+    }
+    var gap = 280, off = dist * 0.5, k0 = Math.floor(off / gap);
+    for (var k = k0; k <= k0 + 3; k++) {
+      var wx = k * gap - off + 60;
+      ctx.fillStyle = '#27304f';
+      ctx.fillRect(wx, 34, 64, 88);
+      ctx.globalAlpha = 0.07;
+      ctx.fillStyle = '#aab8ff';
+      ctx.beginPath();
+      ctx.moveTo(wx, 122); ctx.lineTo(wx + 64, 122); ctx.lineTo(wx + 120, G); ctx.lineTo(wx + 30, G);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#0d0b13';
+      ctx.lineWidth = 3;
+      for (var b = 0; b < 5; b++) {
+        ctx.beginPath(); ctx.moveTo(wx + 6 + b * 13, 34); ctx.lineTo(wx + 6 + b * 13, 122); ctx.stroke();
+      }
+      ctx.strokeRect(wx, 34, 64, 88);
+    }
+    groundFill('#1d1a28', '#6d6585', 'rgba(255,255,255,0.06)');
+  }
+
+  function scene4() {
+    var g = ctx.createLinearGradient(0, 0, 0, G);
+    g.addColorStop(0, '#2a1a3d');
+    g.addColorStop(0.55, '#8a3a4a');
+    g.addColorStop(1, '#e8914f');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, G);
+    ctx.shadowColor = '#ffd98a';
+    ctx.shadowBlur = 40;
+    ctx.fillStyle = '#ffd98a';
+    ctx.beginPath(); ctx.arc(430, G - 46, 36, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    skyline(0.1, 60, 26, 66, '#3a2038', 41, 0);
+    skyline(0.22, 52, 20, 52, '#2a1830', 47, 0);
+    var gap = 96, off = dist * 0.5, k0 = Math.floor(off / gap);
+    for (var k = k0; k <= k0 + 8; k++) {
+      var x = k * gap - off;
+      ctx.fillStyle = '#4a3550';
+      ctx.fillRect(x, G - 72, 2, 72);
+      var fw = 34 + Math.sin(t * 4 + k) * 2;
+      ctx.fillStyle = '#d93a2f';
+      ctx.fillRect(x + 2, G - 72, fw, 22);
+      star(x + 2 + fw / 2, G - 61, 6, col.gold);
+    }
+    ctx.fillStyle = '#1d1226';
+    ctx.globalAlpha = 0.85;
+    var co = (dist * 0.9) % 14;
+    for (var cx = -co; cx < W; cx += 14) {
+      ctx.beginPath(); ctx.arc(cx, G - 9, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(cx - 5, G - 4, 10, 4);
+    }
+    ctx.globalAlpha = 1;
+    groundFill('#2a1d33', col.gold, 'rgba(255,255,255,0.08)');
+  }
+
+  function drawScene() {
+    if (ci === 0) scene0();
+    else if (ci === 1) scene1();
+    else if (ci === 2) scene2();
+    else if (ci === 3) { if (phase2()) scene3b(); else scene3a(); }
+    else scene4();
+  }
+
+  /* ---------- Chướng ngại ---------- */
+  function box(x, y, w, h, c1, c2) {
+    ctx.fillStyle = c1;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = c2;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
+    ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
+    ctx.stroke();
+  }
+  function dCrate(o) { box(o.x, o.y, o.w, o.h, '#8a5a33', '#4f3320'); }
+  function dCrates2(o) {
+    var h2 = o.h / 2;
+    box(o.x, o.y, o.w, h2, '#9a6a3c', '#4f3320');
+    box(o.x, o.y + h2, o.w, h2, '#8a5a33', '#4f3320');
+  }
+  function flyer(o, body, wing, beak) {
+    var cx = o.x + o.w / 2, cy = o.y + o.h / 2 + 2, flap = Math.sin(t * 14) * 12;
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.ellipse(cx, cy, 16, 9, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = wing;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy - 4); ctx.lineTo(cx + 8, cy - 4); ctx.lineTo(cx + 2, cy - 14 - flap);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = beak;
+    ctx.beginPath();
+    ctx.moveTo(cx - 15, cy - 2); ctx.lineTo(cx - 24, cy + 1); ctx.lineTo(cx - 15, cy + 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#15121f';
+    ctx.fillRect(cx - 11, cy - 4, 3, 3);
+  }
+  function dGull(o) { flyer(o, '#e9eef7', '#cfd8ea', col.gold); }
+  function dSnow(o) {
+    ctx.fillStyle = '#e8eefb';
+    ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h, o.w / 2, o.h, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#b8c4e0';
+    ctx.beginPath(); ctx.ellipse(o.x + o.w / 2 + 8, o.y + o.h, o.w / 2 - 8, o.h * 0.6, 0, Math.PI, 0); ctx.fill();
+  }
+  function dAgent(o) {
+    ctx.fillStyle = '#1b1a26';
+    ctx.fillRect(o.x + 3, o.y + 25, 20, o.h - 25);
+    ctx.fillStyle = '#2d2b3d';
+    ctx.fillRect(o.x + 12, o.y + 27, 2, o.h - 27);
+    ctx.fillStyle = '#b99a7e';
+    ctx.beginPath(); ctx.arc(o.x + 13, o.y + 19, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0e0d14';
+    ctx.fillRect(o.x + 6, o.y, 14, 10);
+    ctx.fillRect(o.x + 2, o.y + 9, 22, 3);
+  }
+  function dSign(o) {
+    ctx.strokeStyle = '#6d6585';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(o.x + 8, 0); ctx.lineTo(o.x + 8, o.y);
+    ctx.moveTo(o.x + o.w - 8, 0); ctx.lineTo(o.x + o.w - 8, o.y);
+    ctx.stroke();
+    ctx.fillStyle = '#6b4a2e';
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+    ctx.strokeStyle = col.gold;
+    ctx.strokeRect(o.x + 2, o.y + 2, o.w - 4, o.h - 4);
+  }
+  function dBarrier(o) {
+    ctx.fillStyle = '#e8dccb';
+    ctx.fillRect(o.x, o.y, o.w, 13);
+    ctx.fillStyle = col.accent;
+    for (var x = o.x; x < o.x + o.w - 6; x += 16) {
+      ctx.beginPath();
+      ctx.moveTo(x, o.y); ctx.lineTo(x + 8, o.y); ctx.lineTo(x + 2, o.y + 13); ctx.lineTo(x - 6, o.y + 13);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = '#5b5568';
+    ctx.fillRect(o.x + 6, o.y + 13, 5, o.h - 13);
+    ctx.fillRect(o.x + o.w - 11, o.y + 13, 5, o.h - 13);
+  }
+  function dPost(o) {
+    ctx.fillStyle = '#2b2433';
+    ctx.fillRect(o.x, o.y + 8, o.w, o.h - 8);
+    ctx.fillStyle = '#3d3347';
+    ctx.fillRect(o.x - 4, o.y, o.w + 8, 10);
+    ctx.fillStyle = col.accent;
+    ctx.fillRect(o.x, o.y + 40, o.w, 6);
+    ctx.fillStyle = col.gold;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(o.x + 10, o.y + 18, 20, 14);
+    ctx.globalAlpha = 1;
+  }
+  function dSpot(o) {
+    ctx.strokeStyle = '#6d6585';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, 0); ctx.lineTo(o.x + o.w / 2, o.y + 4); ctx.stroke();
+    ctx.fillStyle = '#3b3f55';
+    ctx.fillRect(o.x, o.y + 4, o.w, o.h - 10);
+    ctx.shadowColor = col.gold;
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = col.gold;
+    ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h - 6, 11, 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+  }
+  function dRock(o) {
+    ctx.fillStyle = col.muted;
+    ctx.beginPath();
+    ctx.moveTo(o.x, o.y + o.h); ctx.lineTo(o.x + 6, o.y + 9); ctx.lineTo(o.x + 20, o.y); ctx.lineTo(o.x + 36, o.y + 6); ctx.lineTo(o.x + o.w, o.y + o.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = col.bg;
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.moveTo(o.x + 24, o.y + 4); ctx.lineTo(o.x + 36, o.y + 6); ctx.lineTo(o.x + o.w, o.y + o.h); ctx.lineTo(o.x + 28, o.y + o.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function dCliff(o) {
+    ctx.fillStyle = '#7c7592';
+    ctx.beginPath();
+    ctx.moveTo(o.x, o.y + o.h); ctx.lineTo(o.x + 4, o.y + o.h * 0.55); ctx.lineTo(o.x + 14, o.y + o.h * 0.2); ctx.lineTo(o.x + 28, o.y);
+    ctx.lineTo(o.x + 40, o.y + o.h * 0.3); ctx.lineTo(o.x + o.w, o.y + o.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = col.bg;
+    ctx.globalAlpha = 0.28;
+    ctx.beginPath();
+    ctx.moveTo(o.x + 28, o.y); ctx.lineTo(o.x + 40, o.y + o.h * 0.3); ctx.lineTo(o.x + o.w, o.y + o.h); ctx.lineTo(o.x + 30, o.y + o.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function dBat(o) {
+    var cx = o.x + o.w / 2, cy = o.y + o.h / 2, f = Math.sin(t * 16) * 9;
+    ctx.fillStyle = '#4a3a6b';
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, cy); ctx.lineTo(cx - 19, cy - 6 - f); ctx.lineTo(cx - 13, cy + 2); ctx.lineTo(cx - 8, cy + 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 3, cy); ctx.lineTo(cx + 19, cy - 6 - f); ctx.lineTo(cx + 13, cy + 2); ctx.lineTo(cx + 8, cy + 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#2d2447';
+    ctx.beginPath(); ctx.ellipse(cx, cy + 1, 6, 8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col.gold;
+    ctx.fillRect(cx - 4, cy - 1, 2, 2);
+    ctx.fillRect(cx + 2, cy - 1, 2, 2);
+  }
+  function dChain(o) {
+    ctx.strokeStyle = '#9aa0b4';
+    ctx.lineWidth = 3;
+    for (var i = 0; i < 3; i++) {
+      ctx.beginPath(); ctx.ellipse(o.x + 7 + i * 13, o.y + 12, 8, 5, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.fillStyle = '#4a4c5c';
+    ctx.beginPath(); ctx.arc(o.x + o.w - 10, o.y + 10, 10, 0, Math.PI * 2); ctx.fill();
+  }
+  function dBars(o) {
+    ctx.fillStyle = '#4a4c5c';
+    ctx.fillRect(o.x, o.y, o.w, 6);
+    ctx.fillRect(o.x, o.y + o.h - 6, o.w, 6);
+    ctx.fillStyle = '#8c90a6';
+    for (var i = 0; i < 5; i++) ctx.fillRect(o.x + 3 + i * 8, o.y + 6, 3, o.h - 12);
+  }
+  function dHang(o) {
+    ctx.strokeStyle = '#6d6585';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, 0); ctx.lineTo(o.x + o.w / 2, o.y + 4); ctx.stroke();
+    ctx.strokeStyle = '#9aa0b4';
+    ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h - 10, 12, 10, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  function dSandbag(o) {
+    ctx.fillStyle = '#a58b5a';
+    var r = [[0, 15, 26, 15], [27, 15, 26, 15], [13, 0, 26, 15]];
+    for (var i = 0; i < r.length; i++) {
+      ctx.fillRect(o.x + r[i][0], o.y + r[i][1], r[i][2], r[i][3]);
+      ctx.strokeStyle = '#6d5a38';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(o.x + r[i][0] + 1, o.y + r[i][1] + 1, r[i][2] - 2, r[i][3] - 2);
+    }
+  }
+  function dBarricade(o) {
+    ctx.fillStyle = '#7a5232';
+    ctx.fillRect(o.x, o.y, 6, o.h);
+    ctx.fillRect(o.x + o.w - 6, o.y, 6, o.h);
+    ctx.fillRect(o.x, o.y + 6, o.w, 9);
+    ctx.fillRect(o.x, o.y + 28, o.w, 9);
+    ctx.fillRect(o.x, o.y + 50, o.w, 9);
+    ctx.strokeStyle = '#5b3a20';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(o.x + 4, o.y + 10); ctx.lineTo(o.x + o.w - 4, o.y + 54);
+    ctx.moveTo(o.x + o.w - 4, o.y + 10); ctx.lineTo(o.x + 4, o.y + 54);
+    ctx.stroke();
+  }
+  function dWire(o) {
+    ctx.strokeStyle = '#6d6585';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(o.x + 4, 0); ctx.lineTo(o.x + 4, o.y + 12);
+    ctx.moveTo(o.x + o.w - 4, 0); ctx.lineTo(o.x + o.w - 4, o.y + 12);
+    ctx.stroke();
+    ctx.strokeStyle = '#aab0c4';
+    ctx.lineWidth = 2;
+    for (var i = 0; i < 6; i++) {
+      ctx.beginPath(); ctx.ellipse(o.x + 8 + i * 6.5, o.y + 13, 8, 10, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  var K = {
+    crate: { w: 40, h: 32, d: dCrate }, crates2: { w: 40, h: 62, d: dCrates2 }, gull: { w: 40, h: 24, air: 1, d: dGull },
+    snow: { w: 52, h: 28, d: dSnow }, agent: { w: 26, h: 60, d: dAgent }, sign: { w: 46, h: 24, air: 1, d: dSign },
+    barrier: { w: 56, h: 28, d: dBarrier }, post: { w: 40, h: 62, d: dPost }, spot: { w: 34, h: 26, air: 1, d: dSpot },
+    rock: { w: 46, h: 30, d: dRock }, cliff: { w: 52, h: 66, d: dCliff }, bat: { w: 38, h: 24, air: 1, d: dBat },
+    chain: { w: 54, h: 20, d: dChain }, bars: { w: 40, h: 64, d: dBars }, hang: { w: 30, h: 26, air: 1, d: dHang },
+    sandbag: { w: 54, h: 30, d: dSandbag }, barricade: { w: 52, h: 62, d: dBarricade }, wire: { w: 46, h: 26, air: 1, d: dWire }
+  };
+
+  function drawStar(it) {
+    var cx = it.x + it.w / 2;
+    var cy = it.y + it.h / 2 + Math.sin(t * 3 + it.x * 0.05) * 2;
+    var pulse = 1 + Math.sin(t * 5 + it.x * 0.1) * 0.08;
+    ctx.shadowColor = col.gold;
+    ctx.shadowBlur = 16;
+    star(cx, cy, 12 * pulse, col.gold);
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = 'rgba(21,18,31,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  function drawPops() {
+    for (var i = 0; i < pops.length; i++) {
+      var p = pops[i], k = p.age / 0.45;
+      ctx.globalAlpha = Math.max(0, 1 - k);
+      ctx.strokeStyle = col.gold;
+      ctx.lineWidth = 1 + 3 * (1 - k);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 10 + k * 34, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------- Âm thanh ---------- */
+  function audioInit() {
+    if (actx) {
+      try { if (actx.state === 'suspended') actx.resume(); } catch (e) {}
+      return;
+    }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) actx = new AC();
+    } catch (e) { actx = null; }
+  }
+
+  function chime() {
+    if (!soundOn || !actx) return;
+    try {
+      var now = actx.currentTime;
+      [[880, 0], [1318.5, 0.09]].forEach(function (n) {
+        var o = actx.createOscillator(), g = actx.createGain();
+        o.type = 'sine';
+        o.frequency.value = n[0];
+        g.gain.setValueAtTime(0.0001, now + n[1]);
+        g.gain.exponentialRampToValueAtTime(0.18, now + n[1] + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + n[1] + 0.3);
+        o.connect(g);
+        g.connect(actx.destination);
+        o.start(now + n[1]);
+        o.stop(now + n[1] + 0.32);
+      });
+    } catch (e) {}
+  }
+
+  /* ---------- Nhân vật ---------- */
+  function drawPlayer() {
+    var duck = P.duck;
+    var cx = P.x + 14;
+    var base = (inv > 0 && Math.floor(t * 14) % 2 === 0) ? 0.35 : 1;
+    ctx.save();
+    ctx.globalAlpha = base;
+    if (duck) {
+      ctx.translate(cx, P.y);
+      ctx.scale(1.2, 0.66);
+      ctx.translate(-cx, -P.y);
+    }
+    var run = P.onGround && state === 'run';
+    var ph = run ? t * 18 : 0;
+    var s = run ? Math.sin(ph) * 7 : 0;
+    var air = !P.onGround;
+    var hipY = P.y - 16;
+    ctx.lineCap = 'round';
+
+    // ba lô
+    ctx.fillStyle = '#7a5a2f';
+    ctx.fillRect(cx - 15, P.y - 31, 8, 15);
+    ctx.fillStyle = '#5b4222';
+    ctx.fillRect(cx - 15, P.y - 31, 8, 3);
+
+    // hai chân và ủng
+    var f1x, f1y, f2x, f2y;
+    if (air) {
+      f1x = cx + 7; f1y = P.y - 9; f2x = cx - 6; f2y = P.y - 6;
+    } else {
+      f1x = cx - 1 + s; f1y = P.y - 2 - (run ? Math.max(0, Math.cos(ph)) * 4 : 0);
+      f2x = cx - 1 - s; f2y = P.y - 2 - (run ? Math.max(0, -Math.cos(ph)) * 4 : 0);
+    }
+    ctx.strokeStyle = '#4f6a30';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(cx, hipY); ctx.lineTo(f2x, f2y);
+    ctx.moveTo(cx, hipY); ctx.lineTo(f1x, f1y);
+    ctx.stroke();
+    ctx.fillStyle = '#2f2418';
+    ctx.fillRect(f2x - 3, f2y - 2, 8, 4);
+    ctx.fillRect(f1x - 3, f1y - 2, 8, 4);
+
+    // thân áo và thắt lưng
+    ctx.fillStyle = '#6a8a3f';
+    ctx.fillRect(cx - 8, P.y - 33, 16, 19);
+    ctx.fillStyle = '#587532';
+    ctx.fillRect(cx - 5, P.y - 29, 5, 4);
+    ctx.fillStyle = '#3a2f1c';
+    ctx.fillRect(cx - 8, P.y - 18, 16, 3);
+
+    // tay sau
+    ctx.strokeStyle = '#5f7a3b';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx - 1, P.y - 30); ctx.lineTo(cx - 6 - s * 0.6, P.y - 22);
+    ctx.stroke();
+
+    // đầu, mũ cối và sao
+    ctx.fillStyle = '#e0b48a';
+    ctx.beginPath(); ctx.arc(cx + 1, P.y - 36, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#6f7f3a';
+    ctx.beginPath(); ctx.ellipse(cx + 1, P.y - 38, 9, 6, 0, Math.PI, 0); ctx.fill();
+    ctx.fillRect(cx - 8, P.y - 38, 19, 3);
+    ctx.fillStyle = col.accent;
+    ctx.beginPath(); ctx.arc(cx + 6, P.y - 41, 3.2, 0, Math.PI * 2); ctx.fill();
+    star(cx + 6, P.y - 41, 2.4, col.gold);
+    if (state === 'over') {
+      ctx.strokeStyle = '#15121f';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + 2.5, P.y - 35.5); ctx.lineTo(cx + 5.5, P.y - 32.5);
+      ctx.moveTo(cx + 5.5, P.y - 35.5); ctx.lineTo(cx + 2.5, P.y - 32.5);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#15121f';
+      ctx.beginPath(); ctx.arc(cx + 4, P.y - 34, 1.2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // tay trước cầm ngọn đèn
+    var hx = cx + 11 + Math.sin(t * 6) * 1.2, hy = P.y - 24 + (run ? Math.sin(ph + Math.PI) * 2 : 0);
+    ctx.strokeStyle = '#6a8a3f';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx + 3, P.y - 30); ctx.lineTo(hx, hy);
+    ctx.stroke();
+    ctx.fillStyle = '#e0b48a';
+    ctx.beginPath(); ctx.arc(hx, hy, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = col.gold;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(hx, hy + 2); ctx.lineTo(hx, hy + 6); ctx.stroke();
+    ctx.shadowColor = col.gold;
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = col.accent;
+    ctx.beginPath(); ctx.ellipse(hx, hy + 12, 5, 6.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = col.gold;
+    ctx.fillRect(hx - 3, hy + 5, 6, 2);
+    ctx.fillRect(hx - 3, hy + 17, 6, 2);
+
+    ctx.restore();
+  }
+
+  function drawBanner() {
+    if (bannerT <= 0) return;
+    var a = Math.max(0, Math.min(1, (3.2 - bannerT) / 0.3, bannerT / 0.6));
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(21,18,31,0.78)';
+    ctx.fillRect(W / 2 - 220, 18, 440, 62);
+    ctx.fillStyle = col.gold;
+    ctx.fillRect(W / 2 - 220, 18, 4, 62);
+    ctx.textAlign = 'center';
+    ctx.font = '19px ' + FONT_D;
+    ctx.fillText(bannerTitle, W / 2, 46);
+    ctx.fillStyle = col.fg;
+    ctx.font = '600 14px ' + FONT_B;
+    ctx.fillText(bannerSub, W / 2, 68);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+
+  function overOverlay() {
+    ctx.fillStyle = 'rgba(21,18,31,0.62)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = col.gold;
+    ctx.font = '26px ' + FONT_D;
+    ctx.fillText('HÀNH TRÌNH TẠM DỪNG', W / 2, 112);
+    ctx.fillStyle = col.fg;
+    ctx.font = '600 15px ' + FONT_B;
+    ctx.fillText('Chạm hoặc nhấn Space để thử lại chặng này', W / 2, 144);
+    ctx.textAlign = 'left';
+  }
+
+  function draw() {
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+    drawScene();
+    var i;
+    for (i = 0; i < obs.length; i++) K[obs[i].kind].d(obs[i]);
+    for (i = 0; i < items.length; i++) drawStar(items[i]);
+    drawPlayer();
+    drawPops();
+    ctx.restore();
+    drawBanner();
+    if (state === 'over') overOverlay();
+  }
+
+  /* ---------- Bảng điểm ---------- */
+  CH.forEach(function (c) {
+    var li = document.createElement('li');
+    li.innerHTML = '<span class="yr">' + c.end + '</span><i></i>';
+    trackEl.appendChild(li);
+  });
+  var trackItems = trackEl.querySelectorAll('li');
+  var hudKey = '';
+
+  function hud() {
+    var sc = Math.floor(dist / 10), inf = info(), p = prog();
+    var key = [sc, best, lives, books, ci, inf.place, inf.who, Math.floor(p * 50)].join('|');
+    if (key === hudKey) return;
+    hudKey = key;
+    scoreEl.textContent = pad(sc);
+    bestEl.textContent = pad(best);
+    chapEl.textContent = 'Chặng ' + (ci + 1) + '/5 · ' + inf.place;
+    whoEl.textContent = inf.who;
+    booksEl.textContent = String(books);
+    var lh = '';
+    for (var i = 0; i < 3; i++) lh += '<span class="life' + (i < lives ? '' : ' off') + '"></span>';
+    livesEl.innerHTML = lh;
+    for (var j = 0; j < trackItems.length; j++) {
+      var pct = j < ci ? 100 : (j === ci ? p * 100 : 0);
+      trackItems[j].style.setProperty('--p', pct.toFixed(1) + '%');
+      trackItems[j].className = j === ci ? 'now' : '';
+    }
+  }
+
+  /* ---------- Thẻ kể chuyện ---------- */
+  function setCard(html) {
+    cardEl.innerHTML = html;
+    stageEl.hidden = true;
+    cardEl.hidden = false;
+    view = 'card';
+    var h = cardEl.querySelector('h2');
+    if (h) { h.tabIndex = -1; h.focus(); }
+  }
+
+  function paras(arr) {
+    return arr.map(function (p) { return '<p>' + p + '</p>'; }).join('');
+  }
+
+  function showIntro() {
+    state = 'card';
+    setCard(
+      '<p class="eyebrow">Câu chuyện</p>' +
+      '<h2>Hành trình tìm đường cứu nước</h2>' +
+      paras([
+        'Bạn vào vai một anh bộ đội Cụ Hồ, mang theo ngọn đèn soi đường và đi qua năm chặng trong cuộc đời hoạt động cách mạng của Chủ tịch Hồ Chí Minh, từ năm 1911 đến năm 1945.',
+        'Ở mỗi chặng, bạn nhảy qua chướng ngại, cúi người né vật bay thấp và nhặt những ngôi sao hy vọng. Cuối chặng có một đoạn kể lại sự kiện lịch sử và một câu hỏi nhanh. Bạn có ba lần ý chí ở mỗi chặng.'
+      ]) +
+      '<button class="btn jump" id="startBtn" type="button">Bắt đầu hành trình</button>'
+    );
+    document.getElementById('startBtn').addEventListener('click', function () {
+      correct = 0; books = 0; booksAtStart = 0;
+      startChapter(0, false);
+    });
+  }
+
+  function showChapterCard(n) {
+    var c = CH[n];
+    var order = [0, 1, 2].sort(function () { return Math.random() - 0.5; });
+    var opts = order.map(function (i) {
+      return '<button type="button" class="opt" data-i="' + i + '">' + c.q.a[i] + '</button>';
+    }).join('');
+    setCard(
+      '<p class="eyebrow">Chặng ' + (n + 1) + '/5 · ' + c.span + '</p>' +
+      '<h2>' + c.title + '</h2>' +
+      paras(c.text) +
+      '<div class="quiz"><p class="q">Câu hỏi nhanh: ' + c.q.q + '</p>' +
+      '<div class="opts">' + opts + '</div>' +
+      '<p class="fb" id="fb" aria-live="polite"></p></div>' +
+      '<button class="btn jump" id="nextBtn" type="button" hidden>' + (n < 4 ? 'Chặng tiếp theo' : 'Xem kết quả') + '</button>'
+    );
+    var buttons = cardEl.querySelectorAll('.opt');
+    var fb = document.getElementById('fb');
+    var next = document.getElementById('nextBtn');
+    var answered = false;
+    Array.prototype.forEach.call(buttons, function (btn) {
+      btn.addEventListener('click', function () {
+        if (answered) return;
+        answered = true;
+        var pick = parseInt(btn.getAttribute('data-i'), 10);
+        Array.prototype.forEach.call(buttons, function (b) { b.disabled = true; });
+        if (pick === c.q.ok) {
+          correct += 1;
+          btn.classList.add('ok');
+          btn.textContent = '✓ ' + btn.textContent;
+          fb.textContent = 'Đúng rồi. ' + c.q.why;
+        } else {
+          btn.classList.add('no');
+          btn.textContent = '✗ ' + btn.textContent;
+          Array.prototype.forEach.call(buttons, function (b) {
+            if (parseInt(b.getAttribute('data-i'), 10) === c.q.ok) {
+              b.classList.add('ok');
+              b.textContent = '✓ ' + b.textContent;
+            }
+          });
+          fb.textContent = 'Chưa đúng. Đáp án đúng là: ' + c.q.a[c.q.ok] + '. ' + c.q.why;
+        }
+        next.hidden = false;
+        next.focus();
+      });
+    });
+    next.addEventListener('click', function () {
+      if (n < 4) startChapter(n + 1, false); else showWin();
+    });
+  }
+
+  function showWin() {
+    saveBest();
+    state = 'card';
+    setCard(
+      '<p class="eyebrow">Hoàn thành hành trình</p>' +
+      '<h2>Đến Quảng trường Ba Đình</h2>' +
+      paras([
+        'Bạn đã đi theo chân Bác từ bến Nhà Rồng năm 1911 đến ngày Tuyên ngôn Độc lập năm 1945.',
+        'Hành trình của Người còn tiếp nối trong những năm kháng chiến và xây dựng đất nước. Trò chơi này chỉ kể đến năm 1945.'
+      ]) +
+      '<dl class="stats">' +
+      '<div><dt>Điểm</dt><dd>' + pad(Math.floor(dist / 10)) + '</dd></div>' +
+      '<div><dt>Sao hy vọng</dt><dd>' + books + '</dd></div>' +
+      '<div><dt>Trả lời đúng</dt><dd>' + correct + '/5</dd></div>' +
+      '</dl>' +
+      '<button class="btn jump" id="againBtn" type="button">Chơi lại từ đầu</button>'
+    );
+    document.getElementById('againBtn').addEventListener('click', function () {
+      correct = 0; books = 0; booksAtStart = 0;
+      startChapter(0, false);
+    });
+  }
+
+  /* ---------- Vòng lặp và điều khiển ---------- */
+  function frame(ts) {
+    if (!last) last = ts;
+    var dt = Math.min((ts - last) / 1000, 1 / 30);
+    last = ts;
+    t += dt;
+    if (view === 'stage') {
+      if (state === 'run') update(dt);
+      draw();
+    }
+    hud();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('keydown', function (e) {
+    if (view !== 'stage') return;
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+      e.preventDefault();
+      if (!e.repeat) press();
+    } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+      e.preventDefault();
+      duckHeld = true;
+    }
+  });
+  window.addEventListener('keyup', function (e) {
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') duckHeld = false;
+  });
+  window.addEventListener('blur', function () { duckHeld = false; });
+  window.addEventListener('pointerup', function () { duckHeld = false; });
+  window.addEventListener('pointercancel', function () { duckHeld = false; });
+
+  cv.addEventListener('pointerdown', function (e) { e.preventDefault(); press(); });
+  document.getElementById('jumpBtn').addEventListener('pointerdown', function (e) { e.preventDefault(); press(); });
+  document.getElementById('duckBtn').addEventListener('pointerdown', function (e) { e.preventDefault(); duckHeld = true; });
+  var soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', function () {
+    soundOn = !soundOn;
+    soundBtn.textContent = soundOn ? 'Âm thanh: bật' : 'Âm thanh: tắt';
+    soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    if (soundOn) { audioInit(); chime(); }
+  });
+
+  showIntro();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
